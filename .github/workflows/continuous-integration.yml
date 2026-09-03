@@ -1,0 +1,43 @@
+name: Continuous Integration
+
+on:
+  pull_request:
+    branches: [main, master]
+  push:
+    branches: [main, master]
+
+jobs:
+  quality-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - run: npm run build-storybook
+
+  end-to-end:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Verify Cypress installation
+        run: npx cypress verify
+        env:
+          CYPRESS_VERIFY_TIMEOUT: 120000
+      - name: Run Cypress E2E with hard timeout
+        run: timeout --signal=TERM --kill-after=15s 180s npm run e2e
+        env:
+          CI: true
+          CYPRESS_VERIFY_TIMEOUT: 120000
